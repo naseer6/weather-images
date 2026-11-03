@@ -1,0 +1,22 @@
+name: Show GitHub identity IDs
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  show-ids:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show non-secret Azure federation fields
+        env:
+          OWNER: ${{ github.repository_owner }}
+          OWNER_ID: ${{ github.repository_owner_id }}
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+        run: |
+          printf 'Organization: %s\n' "$OWNER"
+          printf 'Organization ID: %s\n' "$OWNER_ID"
+          printf 'Repository: %s\n' "${REPOSITORY#*/}"
+          printf 'Repository ID: %s\n' "$REPOSITORY_ID"
+          printf 'Entity: Environment\nEnvironment: azure\n'
+          printf 'Subject: repo:%s@%s/%s@%s:environment:azure\n' "$OWNER" "$OWNER_ID" "${REPOSITORY#*/}" "$REPOSITORY_ID"
