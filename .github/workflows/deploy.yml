@@ -18,6 +18,8 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - run: dotnet build Project/WeatherImages.csproj -c Release
+      - shell: pwsh
+        run: ./tests/smoke-auth.tests.ps1
       - run: npm install --global azurite
       - shell: pwsh
         run: |

@@ -3,13 +3,22 @@ $ErrorActionPreference = 'Stop'
 if ($VerifyAuthentication) {
     if (!$RequestKey) { throw 'RequestKey is required to verify cloud authentication.' }
     foreach ($testHeaders in @(@{}, @{ 'x-functions-key' = 'invalid-key-for-test' })) {
-        $statusCode = 0
-        try { $response = Invoke-WebRequest "$BaseUrl/api/runs" -Method Post -Headers $testHeaders -UseBasicParsing; $statusCode = [int]$response.StatusCode }
-        catch {
-            if ($_.Exception.Response) { $statusCode = [int]$_.Exception.Response.StatusCode }
-            else { throw }
+        for ($attempt = 1; $attempt -le 24; $attempt++) {
+            $statusCode = 0
+            try { $response = Invoke-WebRequest "$BaseUrl/api/runs" -Method Post -Headers $testHeaders -UseBasicParsing -TimeoutSec 10; $statusCode = [int]$response.StatusCode }
+            catch {
+                if ($_.Exception.Response) { $statusCode = [int]$_.Exception.Response.StatusCode }
+                else { throw }
+            }
+            if ($statusCode -eq 401) { break }
+            # Azure may still be recycling the host after accepting a ZIP deployment.
+            # Retry availability errors only; a successful unauthorized request must fail.
+            if ($statusCode -notin @(429, 502, 503, 504) -or $attempt -eq 24) {
+                throw "Expected 401 for missing/invalid request key; got $statusCode after $attempt attempt(s). If unavailable, inspect the Function App logs."
+            }
+            Write-Host "Function host temporarily unavailable ($statusCode); waiting before authentication check ($attempt/24)."
+            Start-Sleep -Seconds 5
         }
-        if ($statusCode -ne 401) { throw "Expected 401 for missing/invalid request key; got $statusCode." }
     }
     Write-Host 'PASS: missing and invalid request keys rejected.'
 }
