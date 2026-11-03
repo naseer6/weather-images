@@ -44,5 +44,5 @@ foreach ($image in $results.images) {
     if ($response.Headers['Content-Type'] -notmatch 'image/jpeg') { throw 'Incorrect blob content type.' }
     if ([long]($response.Headers['Content-Length'] -join '') -le 1000) { throw 'Image unexpectedly small.' }
 }
-Write-Host "PASS: $($run.id) generated $($results.expected) downloadable JPEG images from $($results.uniqueStations) distinct stations ($($results.repeatedImages) repeated station images)."
+Write-Host "PASS: $($run.id) generated $($results.expected) downloadable JPEG images."
 [pscustomobject]@{ RunId = $run.id; BaseUrl = $BaseUrl; Status = $results.status; Images = $results.images.Count; UniqueStations = $results.uniqueStations }
