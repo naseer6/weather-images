@@ -1,4 +1,4 @@
-# Weather Images
+# Weather Images Assignment
 
 Naseer Ahmed Arsalan, student number 722589.
 
