@@ -31,10 +31,12 @@ az bicep install
 az provider register --namespace Microsoft.Web --wait
 az provider register --namespace Microsoft.Storage --wait
 az provider register --namespace Microsoft.Insights --wait
-.\deploy.ps1 -ResourceGroup rg-weather-images -Location westeurope
+.\deploy.ps1 -ResourceGroup rg-weather-images -Location francecentral
 ```
 
 The script publishes .NET code, checks the zip layout, deploys Bicep, uploads the app, waits for health, verifies that missing/incorrect keys return 401, then creates and checks 50 image results. Allow several minutes. Do not call deployment successful unless it exits successfully. If Azure rejects a region or quota, use an allowed region or request quota from your subscription administrator.
+
+The default is Windows Consumption (Y1) and Standard LRS storage, with optional Application Insights disabled to reduce costs. Storage, transactions and bandwidth remain billable; free compute allowances depend on the subscription offer. In Azure Cost Management, create a small resource-group budget with email alerts; a budget is an alert, not a hard spending stop. Develop locally, avoid repeatedly deploying or creating image batches, and delete the dedicated resource group only after grading is complete. If earlier deployments already created Application Insights or a Log Analytics workspace, disabling it in the template does not delete those existing resources: inspect them before removing any unused monitoring resources. `-EnableMonitoring` opts back into telemetry.
 
 On success:
 

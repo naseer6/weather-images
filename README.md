@@ -24,12 +24,14 @@ Follow [GitHub and Azure setup](docs/github-and-azure.md) for the complete accou
 
 Deployment creates billable Azure resources. No deployment has been performed by the implementation task.
 
+Student-cost defaults: Windows Consumption (Y1), one Standard LRS storage account shared by blobs/queues/tables, and Application Insights disabled. There is no paid always-on compute or container registry. Storage transactions/capacity, content files, bandwidth and compute beyond any applicable allowance can still consume credits. Add `-EnableMonitoring` only when paid telemetry is wanted. Redeployment does not delete monitoring resources created by an earlier deployment.
+
 ```powershell
 az login
-./deploy.ps1 -ResourceGroup rg-weather-images -Location westeurope
+./deploy.ps1 -ResourceGroup rg-weather-images -Location francecentral
 ```
 
-The script publishes using `dotnet`, provisions a Windows Consumption Function App plus Storage queues, table, private blobs and Application Insights using Bicep, then zip-deploys using Azure CLI. It waits for health and saves the URL/key in ignored `deployment.private.json`. It generates `docs/api.deployed.http` with the actual HTTPS endpoint. Enter the key in your HTTP client's private environment; share it privately with the assessor. Do not commit the key. Execute the smoke test with that URL and key to verify the deployed pipeline.
+The script publishes using `dotnet`, provisions a Windows Consumption Function App plus Storage queues, table and private blobs using Bicep, then zip-deploys using Azure CLI. Application Insights is optional via `-EnableMonitoring`. The script waits for health, saves the URL/key in ignored `deployment.private.json`, and verifies authentication plus the 50-image pipeline. It generates `docs/api.deployed.http` with the actual HTTPS endpoint. Enter the key in your HTTP client's private environment; share it privately with the assessor. Do not commit the key.
 
 ```powershell
 ./scripts/smoke.ps1 -BaseUrl https://YOUR-APP.azurewebsites.net -RequestKey YOUR-KEY

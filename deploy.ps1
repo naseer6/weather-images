@@ -1,9 +1,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$ResourceGroup,
-    [string]$Location = 'westeurope',
+    [string]$Location = 'francecentral',
     [string]$NamePrefix = 'weatherimages',
-    [string]$Subscription
+    [string]$Subscription,
+    [switch]$EnableMonitoring
 )
 $ErrorActionPreference = 'Stop'
 function Assert-Exit([string]$Step) { if ($LASTEXITCODE -ne 0) { throw "$Step failed ($LASTEXITCODE)." } }
@@ -22,8 +23,13 @@ try {
             if ($required -notin $entries) { throw "Deployment zip is missing $required." }
         }
     } finally { $archive.Dispose() }
-    az group create --name $ResourceGroup --location $Location --output none; Assert-Exit 'Create resource group'
-    $raw = az deployment group create --resource-group $ResourceGroup --template-file infra/main.bicep --parameters namePrefix=$NamePrefix --query properties.outputs -o json
+    $groupExists = az group exists --name $ResourceGroup -o tsv
+    Assert-Exit 'Check resource group'
+    if (($groupExists -join '').Trim() -ne 'true') {
+        az group create --name $ResourceGroup --location $Location --output none; Assert-Exit 'Create resource group'
+    }
+    $monitoring = $EnableMonitoring.IsPresent.ToString().ToLowerInvariant()
+    $raw = az deployment group create --resource-group $ResourceGroup --template-file infra/main.bicep --parameters location=$Location namePrefix=$NamePrefix enableMonitoring=$monitoring --query properties.outputs -o json
     Assert-Exit 'Deploy infrastructure'
     $outputs = ($raw -join "`n") | ConvertFrom-Json
     $app = $outputs.functionAppName.value
