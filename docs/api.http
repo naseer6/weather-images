@@ -1,0 +1,26 @@
+### Use VS Code REST Client or JetBrains HTTP client. Run Create, then copy its id below.
+@baseUrl = http://localhost:7071
+@requestKey = REPLACE_WITH_FUNCTION_KEY_FOR_AZURE
+@runId = REPLACE_WITH_RETURNED_ID
+
+### Health (public)
+GET {{baseUrl}}/api/health
+
+### Create a fresh set (Azure requires a function key; local Core Tools disables auth)
+POST {{baseUrl}}/api/runs
+x-functions-key: {{requestKey}}
+
+### Progress (public; expected=50 images, uniqueStations=39 and repeatedImages=11 for the current feed)
+GET {{baseUrl}}/api/runs/{{runId}}
+
+### Results (50 separate imageId/photoId values; stationId repeats for reused stations; SAS valid for one hour)
+GET {{baseUrl}}/api/runs/{{runId}}/images
+
+### Invalid ID -> 400
+GET {{baseUrl}}/api/runs/invalid
+
+### Unknown ID -> 404
+GET {{baseUrl}}/api/runs/00000000000000000000000000000000
+
+### Missing authentication -> 401 on Azure
+POST {{baseUrl}}/api/runs

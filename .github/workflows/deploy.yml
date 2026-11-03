@@ -1,0 +1,60 @@
+name: Build and deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: weather-images-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet build Project/WeatherImages.csproj -c Release
+      - run: npm install --global azurite
+      - shell: pwsh
+        run: |
+          $entry = Join-Path (npm root --global) 'azurite/dist/src/azurite.js'
+          Start-Process -FilePath node -ArgumentList @("`"$entry`"", '--silent', '--skipApiVersionCheck', '--location', '.artifacts/azurite') -WindowStyle Hidden
+          foreach ($port in @(10000, 10001, 10002)) {
+            $ready = $false
+            for ($attempt = 0; $attempt -lt 30; $attempt++) {
+              $client = New-Object System.Net.Sockets.TcpClient
+              try { $client.Connect('127.0.0.1', $port); $ready = $true; break } catch { Start-Sleep -Seconds 1 } finally { $client.Dispose() }
+            }
+            if (!$ready) { throw "Azurite failed to start on port $port." }
+          }
+      - run: dotnet run --project tests/WeatherImages.Checks.csproj -c Release
+      - run: az bicep build --file infra/main.bicep
+  deploy:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_AZURE_DEPLOY == 'true'
+    environment: azure
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - shell: pwsh
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+        run: ./deploy.ps1 -ResourceGroup $env:RESOURCE_GROUP
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-deployment-evidence
+          path: |
+            docs/api.deployed.http
+            docs/deployment-verification.json

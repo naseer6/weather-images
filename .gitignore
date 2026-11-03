@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/local.settings.json
+.azure/
+.artifacts/
+deployment.private.json
+*.zip
+node_modules/
+.vs/
+*.user
+*.suo
