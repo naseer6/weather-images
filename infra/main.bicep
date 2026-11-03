@@ -1,5 +1,7 @@
 param location string = resourceGroup().location
 param namePrefix string = 'weatherimages'
+@description('Optional paid telemetry. Disabled by default to minimize student-credit usage.')
+param enableMonitoring bool = false
 var suffix = uniqueString(resourceGroup().id)
 var storageName = 'weather${suffix}'
 var appName = '${namePrefix}-${suffix}'
@@ -35,7 +37,7 @@ resource runs 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-01
   parent: tableService
   name: 'runs'
 }
-resource insights 'Microsoft.Insights/components@2020-02-02' = {
+resource insights 'Microsoft.Insights/components@2020-02-02' = if (enableMonitoring) {
   name: '${appName}-insights'
   location: location
   kind: 'web'
@@ -59,16 +61,17 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
       use32BitWorkerProcess: false
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
-      appSettings: [
+      appSettings: concat([
         { name: 'AzureWebJobsStorage', value: connection }
         { name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', value: connection }
         { name: 'WEBSITE_CONTENTSHARE', value: toLower(appName) }
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'dotnet-isolated' }
         { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
-        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
         { name: 'FontPath', value: 'C:/Windows/Fonts/arial.ttf' }
-      ]
+      ], enableMonitoring ? [
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights!.properties.ConnectionString }
+      ] : [])
     }
   }
 }
